@@ -1,6 +1,6 @@
 from pathlib import Path
 import pandas as pd
-from sklearn.model_selection import StratifiedKFold, KFold
+from sklearn.model_selection import StratifiedKFold, KFold, train_test_split
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 
@@ -12,7 +12,7 @@ TARGET = "Survived"
 INITIAL_REPLACE = {
     "Mlle": "Miss", "Mme": "Miss", "Ms": "Miss",
     "Dr": "Mr", "Major": "Mr", "Capt": "Mr", "Sir": "Mr", "Don": "Mr",
-    "Lady": "Mrs", "Countess": "Mrs",
+    "Lady": "Mrs", "Countess": "Mrs", "Dona": "Mrs",
     "Jonkheer": "Other", "Col": "Other", "Rev": "Other",
 }
 AGE_BY_INITIAL = {"Mr": 33, "Mrs": 36, "Miss": 22, "Master": 5, "Other": 46}
@@ -86,6 +86,13 @@ def preprocessor(model_family: str) -> ColumnTransformer:
 
 def get_folds(X, y, cfg):
     """ Get cross-validation splits based on the config. """
+    if cfg.cv.n_splits == 1:
+        stratify = y if cfg.cv.stratified else None
+        train_idx, val_idx = train_test_split(
+            X.index, test_size=0.2, random_state=cfg.general.SEED, stratify=stratify
+        )
+        return [(X.index.get_indexer(train_idx), X.index.get_indexer(val_idx))]
+
     if cfg.cv.stratified:
         kf = StratifiedKFold(n_splits=cfg.cv.n_splits, shuffle=True, random_state=cfg.general.SEED)
         return list(kf.split(X, y))

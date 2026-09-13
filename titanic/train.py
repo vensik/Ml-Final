@@ -1,13 +1,18 @@
 import numpy as np
 from omegaconf import OmegaConf
+
+from data import preprocessor
+from utils import compute_metrics, log_result
+
 from sklearn.pipeline import Pipeline
 from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 
-from data import preprocessor
-from utils import compute_metrics, log_result
+from catboost import CatBoostClassifier, CatBoostRegressor
+from lightgbm import LGBMClassifier, LGBMRegressor
+from xgboost import XGBClassifier, XGBRegressor
 
 """baseline instead of linreg/logreg for list to have same keys"""
 MODEL_REGISTRY = { 
@@ -27,6 +32,18 @@ MODEL_REGISTRY = {
         "classification": (RandomForestClassifier, "tree"),
         "regression": (RandomForestRegressor, "tree"),
     },
+    "catboost": {
+        "classification": (CatBoostClassifier, "tree"),
+        "regression": (CatBoostRegressor, "tree"),
+    },  
+    "lightgbm":{
+       "classification": (LGBMClassifier, "tree"),
+       "regression": (LGBMRegressor, "tree"), 
+    },   
+    "xgboost":{
+       "classification": (XGBClassifier, "tree"),
+       "regression": (XGBRegressor, "tree"), 
+    },   
 }
 
 def get_model(name:str, seed: int, task_type: str, cfg):
@@ -81,7 +98,7 @@ def run_cv(model_name:str, X, y, folds, cfg, results: list) -> np.ndarray:
 
 def fit_predict(model_name: str, X, y, X_test, cfg):
     """"""
-    model, model_family = get_model(model_name, cfg.general.SEED, cfg.general.TASK)
+    model, model_family = get_model(model_name, cfg.general.SEED, cfg.general.TASK, cfg)
     pipeline = Pipeline([
         ("preprocess", preprocessor(model_family)),
         ("model", model),

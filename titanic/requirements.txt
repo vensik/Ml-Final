@@ -6,3 +6,6 @@ scikit-learn>=1.4
 scipy
 jupyter
 omegaconf 
+catboost>=1.2.10
+lightgbm>=4.7.0
+xgboost>=3.4.1

@@ -19,6 +19,10 @@ config = OmegaConf.create({
         "TEST_PATH": str(DATA_DIR / "test.csv"),
         "RESULTS_DIR": str(ROOT_DIR / "results")
     },
+    "training": {
+        "n_estimators": 200,
+        "learning_rate": 0.01,
+    },
     
     "cv": {
         "n_splits": 5,
@@ -30,9 +34,27 @@ config = OmegaConf.create({
             "classification": {"max_iter": 1000},
             "regression": {}
         },
-        "knn": {"n_neighbors": 5},
-        "tree": {"max_depth": None},
-        "rf": {"n_estimators": 100, "max_depth": None},
+        "knn": {"n_neighbors": 11},
+        "tree": {"max_depth": 3},
+        "rf": {"n_estimators": "${training.n_estimators}", "max_depth": 5},
+        "catboost": {
+            "n_estimators": "${training.n_estimators}",
+            "learning_rate": "${training.learning_rate}",
+            "depth": 4,
+            "verbose": False,   
+        },
+        "lightgbm": {
+            "num_leaves": 63,
+            "n_estimators": 100,
+            "learning_rate": "${training.learning_rate}",
+            "max_depth": 10,
+            "verbose": -1,
+        },        
+        "xgboost": {
+            "n_estimators": "${training.n_estimators}",
+            "learning_rate": "${training.learning_rate}",
+            "max_depth": 3,
+        },
     },
 })
 
