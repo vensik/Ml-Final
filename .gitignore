@@ -7,5 +7,7 @@ data/
 models/
 results/
 
+titanic/testing_sharpening.ipynb
+
 catboost_info
 *.pyc
