@@ -10,7 +10,12 @@ config = OmegaConf.create({
     "general": {
         "SEED": 67,
         "EXPT_NAME": "titanic",
-        "TASK": "classification"
+        "TASK": "classification",
+
+        "TARGET": "Survived",
+        "ID": "PassengerId",
+
+        "DEVICE": "cpu",
     },
 
     "paths": {
@@ -20,8 +25,9 @@ config = OmegaConf.create({
         "RESULTS_DIR": str(ROOT_DIR / "results")
     },
     "training": {
-        "n_estimators": 200,
-        "learning_rate": 0.01,
+        "n_estimators1": 200,
+        "n_estimators2": 400,
+        "learning_rate": 0.005,
     },
     
     "cv": {
@@ -36,25 +42,48 @@ config = OmegaConf.create({
         },
         "knn": {"n_neighbors": 11},
         "tree": {"max_depth": 3},
-        "rf": {"n_estimators": "${training.n_estimators}", "max_depth": 5},
+        "rf": {
+            "n_estimators": "${training.n_estimators1}",
+            "max_depth": 4,
+            "min_samples_leaf": 5
+        },
         "catboost": {
-            "n_estimators": "${training.n_estimators}",
+            "n_estimators": "${training.n_estimators2}",
             "learning_rate": "${training.learning_rate}",
             "depth": 4,
-            "verbose": False,   
+            "verbose": False,
+            "thread_count": 1,   
         },
         "lightgbm": {
             "num_leaves": 63,
-            "n_estimators": 100,
+            "n_estimators": "${training.n_estimators1}",
             "learning_rate": "${training.learning_rate}",
-            "max_depth": 10,
+            "max_depth": 9,
             "verbose": -1,
+            "n_jobs": 1,
         },        
         "xgboost": {
-            "n_estimators": "${training.n_estimators}",
-            "learning_rate": "${training.learning_rate}",
-            "max_depth": 3,
+            "n_estimators": "${training.n_estimators2}",
+            "learning_rate": 0.01,
+            "max_depth": 2,
+            "n_jobs": 1,
         },
+        "mlp": {
+            "epochs": 100,
+            "batch_size": 32,
+            "learning_rate": 0.001,
+            "dropout": 0.2,
+        },
+    },
+    "to_run": {
+        "baseline": True,
+        "knn": False,
+        "tree": False,
+        "rf": True,
+        "catboost": True,
+        "lightgbm": True,
+        "xgboost": True,
+        "mlp": True,
     },
 })
 

@@ -1,20 +1,28 @@
 import random
 import numpy as np
 import pandas as pd
+
+from datetime import datetime
 from pathlib import Path
+
 from sklearn.metrics import accuracy_score, roc_auc_score, mean_squared_error, mean_absolute_error
+
+import torch
 
 def set_seed(seed: int) -> None:
     """ Set the random seed for reproducibility. """
 
     random.seed(seed)
     np.random.seed(seed)
-    # try:
-    #     import torch
-    #     torch.manual_seed(seed)
-    #     torch.cuda.manual_seed_all(seed)
-    # except ImportError:
-    #     pass  # Torch is not installed, skip setting seed for torch
+    try:
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+    except ImportError:
+        pass  # Torch is not installed, skip setting seed for torch
+
+def get_timestamp() -> str:
+    """ Return current time for unique results """
+    return datetime.now().strftime("%Y%m%d_%H%M%S")
 
 def compute_metrics(task_type: str, y_true, y_pred, y_proba=None) -> dict:
     """ Compute evaluation metrics based on the task type. """
@@ -27,7 +35,7 @@ def compute_metrics(task_type: str, y_true, y_pred, y_proba=None) -> dict:
 
     if task_type == "regression":
         return {
-            "rmse": mean_squared_error(y_true, y_pred),
+            "rmse": mean_squared_error(y_true, y_pred) ** 0.5,
             "mae": mean_absolute_error(y_true, y_pred),
         }
     raise ValueError(f"Unsupported task type: {task_type}. Supported types are 'classification' and 'regression'.")
@@ -42,3 +50,12 @@ def save_results(results: list, path: Path) -> pd.DataFrame:
     df = pd.DataFrame(results)
     df.to_csv(path, index=False)
     return df
+
+def make_submission(test_df, predictions, cfg, path:Path) -> pd.DataFrame:
+    """ Create Kaggle submission.csv """
+    submission = pd.DataFrame({
+        cfg.general.ID: test_df[cfg.general.ID],
+        cfg.general.TARGET: predictions.astype(int),
+    })
+    submission.to_csv(path, index=False)
+    return submission

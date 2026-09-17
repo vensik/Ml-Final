@@ -9,3 +9,4 @@ omegaconf
 catboost>=1.2.10
 lightgbm>=4.7.0
 xgboost>=3.4.1
+torch>=2.14.0
