@@ -42,6 +42,7 @@ class MLP(nn.Module):
 
             nn.Linear(32,1)
         )
+        self.to(self.device)
 
     def forward(self, x):
         return self.mlp(x) 
@@ -58,6 +59,8 @@ class MLP(nn.Module):
 
         for epoch in range(self.epochs):
             for X_batch, y_batch in loader:
+                X_batch = X_batch.to(self.device)
+                y_batch = y_batch.to(self.device)
 
                 optimizer.zero_grad()
 
@@ -72,10 +75,11 @@ class MLP(nn.Module):
 
     def predict(self, X):
         self.eval()
+        X = X.to(self.device)
 
         with torch.no_grad():
             logits = self(X)
-            y_proba = torch.sigmoid(logits).squeeze(1).numpy()
+            y_proba = torch.sigmoid(logits).squeeze(1).cpu().numpy()
 
         y_pred = (y_proba >= 0.5).astype(int)
 
