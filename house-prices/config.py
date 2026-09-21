@@ -9,11 +9,11 @@ config = OmegaConf.create({
 
     "general": {
         "SEED": 67,
-        "EXPT_NAME": "titanic",
-        "TASK": "classification",
+        "EXPT_NAME": "house-prices",
+        "TASK": "regression",
 
-        "TARGET": "Survived",
-        "ID": "PassengerId",
+        "TARGET": "SalePrice",
+        "ID": "Id",
 
         "DEVICE": "cpu",
     },
