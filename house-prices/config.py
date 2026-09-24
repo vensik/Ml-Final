@@ -27,12 +27,13 @@ config = OmegaConf.create({
     "training": {
         "n_estimators1": 200,
         "n_estimators2": 400,
-        "learning_rate": 0.005,
+        "learning_rate": 0.03,
     },
     
     "cv": {
+        "ON": False,
         "n_splits": 5,
-        "stratified": True,
+        "stratified": False,
     },
 
     "models": {
@@ -44,28 +45,28 @@ config = OmegaConf.create({
         "tree": {"max_depth": 3},
         "rf": {
             "n_estimators": "${training.n_estimators1}",
-            "max_depth": 4,
+            "max_depth": 6,
             "min_samples_leaf": 5
         },
         "catboost": {
             "n_estimators": "${training.n_estimators2}",
             "learning_rate": "${training.learning_rate}",
-            "depth": 4,
+            "depth": 5,
             "verbose": False,
             "thread_count": 1,   
         },
         "lightgbm": {
             "num_leaves": 63,
-            "n_estimators": "${training.n_estimators1}",
+            "n_estimators": "${training.n_estimators2}",
             "learning_rate": "${training.learning_rate}",
-            "max_depth": 9,
+            "max_depth": 11,
             "verbose": -1,
             "n_jobs": 1,
         },        
         "xgboost": {
             "n_estimators": "${training.n_estimators2}",
-            "learning_rate": 0.01,
-            "max_depth": 2,
+            "learning_rate": 0.03,
+            "max_depth": 4,
             "n_jobs": 1,
         },
         "mlp": {
@@ -83,7 +84,7 @@ config = OmegaConf.create({
         "catboost": True,
         "lightgbm": True,
         "xgboost": True,
-        "mlp": True,
+        "mlp": False,
     },
 })
 

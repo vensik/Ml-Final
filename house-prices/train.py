@@ -9,6 +9,7 @@ from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 
 from catboost import CatBoostClassifier, CatBoostRegressor
 from lightgbm import LGBMClassifier, LGBMRegressor
@@ -159,7 +160,7 @@ def train_model(model_name: str, X_train, y_train, cfg):
     model_family = MODEL_REGISTRY[model_name][task_type][1]
 
     if model_family == "torch": # Train logic for PyTorch models
-        prep = postprocessing("linear")
+        prep = postprocessing("linear", X_train)
         X_train = prep.fit_transform(X_train)
         if hasattr(X_train, "toarray"):
             X_train = X_train.toarray()
@@ -175,7 +176,7 @@ def train_model(model_name: str, X_train, y_train, cfg):
     model, model_family = get_model(model_name, cfg.general.SEED, task_type, cfg)
     
     pipeline = Pipeline([
-        ("postprocess", postprocessing(model_family)),
+        ("postprocess", postprocessing(model_family, X_train)),
         ("model", model),
     ])
     pipeline.fit(X_train, y_train)
@@ -215,3 +216,41 @@ def run_cv(model_name:str, X, y, folds, cfg, results: list) -> np.ndarray:
         log_result(results, model_name, fold, metrics)
 
     return oof_preds
+
+def tune_hyperparams(model_name, X, y, folds, cfg, params_grid, grid_mode=True):
+    """"""
+    task_type = cfg.general.TASK
+
+    model_cls, model_family = MODEL_REGISTRY[model_name][task_type]
+
+    extra_params = {}
+    if model_name == "catboost":
+        extra_params = {"verbose": False}
+    elif model_name == "lightgbm":
+        extra_params = {"verbose": -1, "n_jobs": 1} 
+    elif model_name == "xgboost":
+        extra_params = {"n_jobs": 1}
+
+    try:
+        base_model = model_cls(random_state=cfg.general.SEED, **extra_params)
+    except TypeError:
+        base_model = model_cls(**extra_params)
+
+    pipeline = Pipeline([
+        ("postprocess", postprocessing(model_family, X)),
+        ("model", base_model),
+    ])
+
+    scoring = "accuracy" if task_type == "classification" else "neg_root_mean_squared_error"
+
+    if grid_mode:
+        search = GridSearchCV(pipeline, param_grid=params_grid, cv=folds, scoring=scoring, n_jobs=1)
+    else:
+        search = RandomizedSearchCV(
+            pipeline, param_distributions=params_grid, n_iter=20, cv=folds,
+            scoring=scoring, random_state=cfg.general.SEED, n_jobs=1
+        )
+    search.fit(X, y)
+
+    return search
+

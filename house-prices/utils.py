@@ -24,6 +24,7 @@ def get_timestamp() -> str:
     """ Return current time for unique results """
     return datetime.now().strftime("%Y%m%d_%H%M%S")
 
+
 def compute_metrics(task_type: str, y_true, y_pred, y_proba=None) -> dict:
     """ Compute evaluation metrics based on the task type. """
     
@@ -50,6 +51,18 @@ def save_results(results: list, path: Path) -> pd.DataFrame:
     df = pd.DataFrame(results)
     df.to_csv(path, index=False)
     return df
+
+def get_best_model(results: pd.DataFrame, task_type: str) -> str:
+    """Select best model for submission based on task type."""
+    scores = results.groupby("model").mean(numeric_only=True)
+
+    if task_type == "classification":
+        return scores["accuracy"].idxmax()
+    
+    if task_type == "regression":
+        return scores["rmse"].idxmin()
+
+    raise ValueError(f"Unsupported task type: {task_type}.")
 
 def make_submission(test_df, predictions, cfg, path:Path) -> pd.DataFrame:
     """ Create Kaggle submission.csv """
