@@ -1,5 +1,6 @@
 from pathlib import Path
 import pandas as pd
+import numpy as np
 from config import config
 
 from sklearn.model_selection import StratifiedKFold, KFold, train_test_split
@@ -90,7 +91,10 @@ def gen_features(df: pd.DataFrame) -> pd.DataFrame:
     """ Generate new features. """
     df = df.copy()
 
-    #Feature generation
+    # Log transform skewed features
+    df["LotArea"] = np.log1p(df["LotArea"])
+
+    # Feature generation
     df["TotalSF"] = df["GrLivArea"] + df["TotalBsmtSF"]
 
     df["TotalPorchSF"] = (

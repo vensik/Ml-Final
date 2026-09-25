@@ -68,7 +68,7 @@ def make_submission(test_df, predictions, cfg, path:Path) -> pd.DataFrame:
     """ Create Kaggle submission.csv """
     submission = pd.DataFrame({
         cfg.general.ID: test_df[cfg.general.ID],
-        cfg.general.TARGET: predictions.astype(int),
+        cfg.general.TARGET: predictions,
     })
     submission.to_csv(path, index=False)
     return submission

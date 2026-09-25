@@ -31,7 +31,7 @@ config = OmegaConf.create({
     },
     
     "cv": {
-        "ON": False,
+        "ON": True,
         "n_splits": 5,
         "stratified": False,
     },
@@ -70,21 +70,21 @@ config = OmegaConf.create({
             "n_jobs": 1,
         },
         "mlp": {
-            "epochs": 100,
+            "epochs": 300,
             "batch_size": 32,
-            "learning_rate": 0.001,
-            "dropout": 0.2,
+            "learning_rate": 0.003,
+            "dropout": 0.0,
         },
     },
     "to_run": {
         "baseline": True,
         "knn": False,
         "tree": False,
-        "rf": True,
-        "catboost": True,
-        "lightgbm": True,
-        "xgboost": True,
-        "mlp": False,
+        "rf": False,
+        "catboost": False,
+        "lightgbm": False,
+        "xgboost": False,
+        "mlp": True,
     },
 })
 

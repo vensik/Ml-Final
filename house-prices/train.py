@@ -24,13 +24,16 @@ from torch.utils.data import DataLoader, TensorDataset
 
 class MLP(nn.Module):
     """MLP for binary classification"""
-    def __init__(self, input_dim, epochs=100, batch_size=32, learning_rate=0.001, device="cpu", dropout=0.2):
+    def __init__(
+            self, input_dim, device="cpu", task_type="classification", epochs=100,
+            batch_size=32, learning_rate=0.001, dropout=0.2, ):
         super().__init__()
 
         self.device = device
         self.epochs = epochs
         self.batch_size = batch_size
         self.learning_rate = learning_rate
+        self.task_type = task_type
 
         self.mlp = nn.Sequential(
             nn.Linear(input_dim, 64),
@@ -52,8 +55,13 @@ class MLP(nn.Module):
         df = TensorDataset(X_train, y_train)
 
         loader = DataLoader(df, batch_size=self.batch_size, shuffle=True)
-
-        criterion = nn.BCEWithLogitsLoss()
+        
+        if self.task_type == "classification":
+            criterion = nn.BCEWithLogitsLoss()
+        elif self.task_type == "regression":
+            criterion = nn.MSELoss()
+        else:
+            raise ValueError(f"Unsupported task type: {self.task_type}")
         optimizer = torch.optim.Adam( self.parameters(), lr=self.learning_rate)
 
         self.train()
@@ -65,11 +73,12 @@ class MLP(nn.Module):
 
                 optimizer.zero_grad()
 
-                logits = self(X_batch)
+                output = self(X_batch)
 
-                loss = criterion(logits, y_batch)
+                loss = criterion(output, y_batch)
 
                 loss.backward()
+                torch.nn.utils.clip_grad_norm_(self.parameters(), max_norm=1.0)
                 optimizer.step()
 
         return self
@@ -79,12 +88,19 @@ class MLP(nn.Module):
         X = X.to(self.device)
 
         with torch.no_grad():
-            logits = self(X)
-            y_proba = torch.sigmoid(logits).squeeze(1).cpu().numpy()
+            output = self(X)
 
-        y_pred = (y_proba >= 0.5).astype(int)
+        if self.task_type == "classification":
+            y_proba = torch.sigmoid(output).squeeze(1)
+            y_pred = (y_proba >= 0.5).int()
 
-        return y_pred, y_proba
+            return y_pred.cpu().numpy(), y_proba.cpu().numpy()
+        
+        if self.task_type == "regression":
+            y_pred = output.squeeze(1)
+            return y_pred.cpu().numpy(), None
+
+        raise ValueError(f"Unsupported task type: {self.task_type}")
 
 
 # == Train functions ==
@@ -120,6 +136,7 @@ MODEL_REGISTRY = {  # baseline instead of linreg/logreg for list to have same ke
     },
     "mlp": {
         "classification": (MLP, "torch"),
+        "regression": (MLP, "torch")
     } 
 }
 
@@ -143,7 +160,7 @@ def get_model(name:str, seed: int, task_type: str, cfg, input_dim=None):
         if input_dim is None:
             raise ValueError("input_dim is required for DNN")
         
-        model = model_cls(input_dim=input_dim, **params)
+        model = model_cls(input_dim=input_dim, task_type=task_type, **params)
         return model, model_family
     
     try:
@@ -166,7 +183,13 @@ def train_model(model_name: str, X_train, y_train, cfg):
             X_train = X_train.toarray()
 
         X_train = torch.tensor(X_train, dtype=torch.float32)
-        y_train = torch.tensor(y_train.values, dtype=torch.float32).unsqueeze(1)
+
+        if task_type == "regression":
+            y_train = np.log1p(y_train.values)
+        else:
+            y_train = y_train.values
+
+        y_train = torch.tensor(y_train, dtype=torch.float32).unsqueeze(1)
 
         model, _ = get_model(model_name, cfg.general.SEED, task_type, cfg, input_dim=X_train.shape[1])
         model.fit(X_train, y_train)
@@ -184,14 +207,20 @@ def train_model(model_name: str, X_train, y_train, cfg):
     return pipeline, None
 
 def predict(model, prep, X):
-    """Make predictions using trained model."""
+    """Make predictions using train model."""
 
     if isinstance(model, MLP):
         X = prep.transform(X)
         if hasattr(X, "toarray"):
             X = X.toarray()
         X = torch.tensor(X, dtype=torch.float32)
-        return model.predict(X)
+
+        y_pred, y_proba = model.predict(X)
+        
+        if model.task_type == "regression":
+            y_pred = np.expm1(y_pred)
+        
+        return y_pred, y_proba
 
     y_pred = model.predict(X)
     y_proba = None
