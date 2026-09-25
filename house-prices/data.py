@@ -76,9 +76,6 @@ def preprocessing(df: pd.DataFrame) -> pd.DataFrame:
     df.loc[df["MasVnrArea"] == 0, "MasVnrType"] = "None"
     df.loc[(df["MasVnrArea"] > 0) & (df["MasVnrType"].isna()), "MasVnrType"] = "Unknown"
 
-    # ||Пометка для Сode review|| На cv может быть leakage по val, но решил, что это не так критично и не требуют усложнения пайплайна
-    df["LotFrontage"] = (df["LotFrontage"].fillna(df.groupby("Neighborhood")["LotFrontage"].transform("median")))
-
     # Ordinal mapping
     for col in ORD_FEAT:
         if col in df.columns:
@@ -90,9 +87,6 @@ def preprocessing(df: pd.DataFrame) -> pd.DataFrame:
 def gen_features(df: pd.DataFrame) -> pd.DataFrame:
     """ Generate new features. """
     df = df.copy()
-
-    # Log transform skewed features
-    df["LotArea"] = np.log1p(df["LotArea"])
 
     # Feature generation
     df["TotalSF"] = df["GrLivArea"] + df["TotalBsmtSF"]
@@ -109,7 +103,27 @@ def gen_features(df: pd.DataFrame) -> pd.DataFrame:
 
     df["AvgRoomArea"] = df["GrLivArea"] / df["TotRmsAbvGrd"]
 
+    # Log transform skewed features
+    df["LotArea"] = np.log1p(df["LotArea"])
+    # Drop columns 
+    df = df.drop(columns=["MiscVal", "MiscFeature"])
     return df
+
+def prep_fold(train_df, *dfs):
+    train_df = train_df.copy()
+    dfs = [df.copy() for df in dfs]
+
+    lotf_median = (train_df.groupby("Neighborhood")["LotFrontage"].median())
+    global_median = train_df["LotFrontage"].median()
+
+    def apply(df): # Let not duplicate code for train, val, test dfs
+        df["LotFrontage"] = (df["LotFrontage"].fillna(df["Neighborhood"].map(lotf_median)).fillna(global_median))
+        return df
+
+    train_df = apply(train_df)
+    dfs = [apply(df) for df in dfs]
+
+    return train_df, *dfs
 
 def get_feat_groups(df: pd.DataFrame):
     """Group features by their type."""

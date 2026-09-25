@@ -31,7 +31,7 @@ config = OmegaConf.create({
     },
     
     "cv": {
-        "ON": True,
+        "ON": False,
         "n_splits": 5,
         "stratified": False,
     },
@@ -39,7 +39,7 @@ config = OmegaConf.create({
     "models": {
         "baseline": {
             "classification": {"max_iter": 1000},
-            "regression": {}
+            "regression": {"alpha": 10}
         },
         "knn": {"n_neighbors": 11},
         "tree": {"max_depth": 3},
@@ -70,10 +70,12 @@ config = OmegaConf.create({
             "n_jobs": 1,
         },
         "mlp": {
-            "epochs": 300,
+            "epochs": 500,
             "batch_size": 32,
-            "learning_rate": 0.003,
+            "learning_rate": 3e-4,
             "dropout": 0.0,
+            "patience": 30,
+            "min_delta": 1e-4,
         },
     },
     "to_run": {
@@ -81,9 +83,9 @@ config = OmegaConf.create({
         "knn": False,
         "tree": False,
         "rf": False,
-        "catboost": False,
+        "catboost": True,
         "lightgbm": False,
-        "xgboost": False,
+        "xgboost": True,
         "mlp": True,
     },
 })

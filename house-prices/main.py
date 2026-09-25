@@ -1,6 +1,6 @@
 from pathlib import Path
 from config import config
-from data import load_data, preprocessing, gen_features, get_folds
+from data import load_data, preprocessing, gen_features, get_folds, prep_fold
 from train import run_cv, train_model, predict
 from utils import set_seed, save_results, get_timestamp, get_best_model, make_submission
 
@@ -42,6 +42,8 @@ def main():
         if not best_model_path.exists():
             raise FileNotFoundError("best_model.txt not found. Run CV first")
         best_model = best_model_path.read_text().strip()
+
+        X, test_fe = prep_fold(X, test_fe)
 
         model, prep = train_model(best_model, X, y, config)
         preds, _ = predict(model, prep, test_fe)
