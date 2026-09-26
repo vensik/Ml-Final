@@ -14,7 +14,9 @@ A collection of machine learning projects completed as part of the final ML proj
     2. source .venv/bin/activate
     3. pip install requirements.txt
     4. Check config.py if cv -> ON is False
-    5. python main.py
+    5. titanic: 
+    python main.py && kaggle competitions submit -c titanic -f "$(ls -t results/*submission*.csv | head -1)
+       house-prices: python main.py && kaggle competitions submit -c house-prices-advanced-regression-techniques -f "$(ls -t results/*submission*.csv | head -1)"
 
 ---
 
