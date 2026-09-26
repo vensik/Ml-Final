@@ -16,7 +16,8 @@ A collection of machine learning projects completed as part of the final ML proj
     4. Check config.py if cv -> ON is False
     5. titanic: 
     python main.py && kaggle competitions submit -c titanic -f "$(ls -t results/*submission*.csv | head -1)
-       house-prices: python main.py && kaggle competitions submit -c house-prices-advanced-regression-techniques -f "$(ls -t results/*submission*.csv | head -1)"
+    house-prices: 
+    python main.py && kaggle competitions submit -c house-prices-advanced-regression-techniques -f "$(ls -t results/*submission*.csv | head -1)"
 
 ---
 
@@ -26,10 +27,10 @@ A collection of machine learning projects completed as part of the final ML proj
 
 ### Feature engineering
 
-**Initial** - Initials of passenger such as Mr, Miss, etc
-**Age_range** - Age splited in 5 equal folds 
-**Fare_cat** - Same as Age for Fare in 4 folds
-**FamSize** and **Alone** - Combination of Sibling|Spouse and Parent|Children feats. Alone if FamSize = 0
+- **Initial** - Initials of passenger such as Mr, Miss, etc
+- **Age_range** - Age splited in 5 equal folds 
+- **Fare_cat** - Same as Age for Fare in 4 folds
+- **FamSize** and **Alone** - Combination of Sibling|Spouse and Parent|Children feats. Alone if FamSize = 0
 
 ### Result
 
@@ -47,12 +48,12 @@ A collection of machine learning projects completed as part of the final ML proj
 
 ### Feature engineering
 
-**TotalSF** - Overall house square feet
-**TotalPorchSF** - Overall square feet of open-air zone of the house
-**HouseAge** - Age from built to sold
-**RemodAge** - Age from remodeled to sold
-**TotalBath** - Amount of all house bathrooms
-**AvgRoomArea** - Rude mean square foot of each room
+- **TotalSF** - Overall house square feet
+- **TotalPorchSF** - Overall square feet of open-air zone of the house
+- **HouseAge** - Age from built to sold
+- **RemodAge** - Age from remodeled to sold
+- **TotalBath** - Amount of all house bathrooms
+- **AvgRoomArea** - Rude mean square foot of each room
 
 ### Result
 
