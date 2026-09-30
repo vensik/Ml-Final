@@ -242,26 +242,31 @@ def train_model(model_name: str, X_train, y_train, cfg, X_val=None, y_val=None):
 
     if model_family == "torch": # Train logic for PyTorch models
         prep = postprocessing("linear", X_train)
+        
         X_train = prep.fit_transform(X_train)
-        if X_val is not None:
-            X_val = prep.transform(X_val)
         if hasattr(X_train, "toarray"):
             X_train = X_train.toarray()
-        if hasattr(X_val, "toarray"):
-            X_val = X_val.toarray()
-
         X_train = torch.tensor(X_train, dtype=torch.float32)
-        X_val = torch.tensor(X_val, dtype=torch.float32)
-
+    
         if task_type == "regression":
             y_train = np.log1p(y_train.values)
-            y_val = np.log1p(y_val.values)
         else:
             y_train = y_train.values
-            y_val = y_val.values
-
+        
         y_train = torch.tensor(y_train, dtype=torch.float32).unsqueeze(1)
-        y_val = torch.tensor(y_val, dtype=torch.float32).unsqueeze(1)
+        
+        if X_val is not None and y_val is not None:
+            X_val = prep.transform(X_val)
+            if hasattr(X_val, "toarray"):
+                X_val = X_val.toarray()
+            X_val = torch.tensor(X_val, dtype=torch.float32)
+            
+            if task_type == "regression":
+                y_val = np.log1p(y_val.values)
+            else:
+                y_val = y_val.values
+
+            y_val = torch.tensor(y_val, dtype=torch.float32).unsqueeze(1)
 
         model, _ = get_model(model_name, cfg.general.SEED, task_type, cfg, input_dim=X_train.shape[1])
         model.fit(X_train, y_train, X_val, y_val)

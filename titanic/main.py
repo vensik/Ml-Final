@@ -15,10 +15,13 @@ def main():
     results = []
 
     train_df, test_df = load_data(config)
+
     train_df = preprocessing(train_df)
     test_df = preprocessing(test_df)
+    
     train_fe = gen_features(train_df)
     test_fe = gen_features(test_df)
+    
     X, y = train_fe[ALL_FEAT], train_fe[config.general.TARGET]
     folds = get_folds(X, y, config)
 

@@ -20,23 +20,53 @@ from torch.utils.data import DataLoader, TensorDataset
 
 
 # == DNN Model ==
+class EarlyStopping:
+    def __init__(self, patience=20, min_delta=0.0):
+        self.patience = patience
+        self.min_delta = min_delta
+
+        self.best_loss = float("inf")
+        self.counter = 0
+        self.best_state = None
+
+    def __call__(self, val_loss, model):
+        if val_loss < self.best_loss - self.min_delta:
+            self.best_loss = val_loss
+            self.counter = 0
+
+            self.best_state = {
+                key: value.cpu().clone()
+                for key, value in model.state_dict().items()
+            }
+        else:
+            self.counter += 1
+
+        return self.counter >= self.patience
+
+    def restore_best(self, model):
+        if self.best_state is not None:
+            model.load_state_dict(self.best_state)
 
 class MLP(nn.Module):
     """MLP for binary classification"""
-    def __init__(self, input_dim, epochs=100, batch_size=32, learning_rate=0.001, device="cpu", dropout=0.2):
+    def __init__(self, input_dim, device="cpu", epochs=100, batch_size=32, learning_rate=0.001, dropout=0.2, patience=20, min_delta=0.0):
         super().__init__()
 
         self.device = device
         self.epochs = epochs
         self.batch_size = batch_size
         self.learning_rate = learning_rate
+        self.patience = patience
+        self.min_delta = min_delta
 
         self.mlp = nn.Sequential(
             nn.Linear(input_dim, 64),
+            nn.BatchNorm1d(64),
             nn.ReLU(),
             nn.Dropout(dropout),
 
             nn.Linear(64, 32),
+            nn.BatchNorm1d(32),
             nn.ReLU(),
             nn.Dropout(dropout),
 
@@ -47,17 +77,22 @@ class MLP(nn.Module):
     def forward(self, x):
         return self.mlp(x) 
 
-    def fit(self, X_train, y_train):
+    def fit(self, X_train, y_train, X_val=None, y_val=None):
         df = TensorDataset(X_train, y_train)
 
         loader = DataLoader(df, batch_size=self.batch_size, shuffle=True)
 
         criterion = nn.BCEWithLogitsLoss()
         optimizer = torch.optim.Adam( self.parameters(), lr=self.learning_rate)
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", factor=0.5, patience=5, min_lr=1e-6)
+        early_stopping = EarlyStopping(patience=self.patience, min_delta=self.min_delta)
 
         self.train()
 
         for epoch in range(self.epochs):
+            self.train()
+            train_loss = 0.0
+
             for X_batch, y_batch in loader:
                 X_batch = X_batch.to(self.device)
                 y_batch = y_batch.to(self.device)
@@ -69,7 +104,41 @@ class MLP(nn.Module):
                 loss = criterion(logits, y_batch)
 
                 loss.backward()
+                torch.nn.utils.clip_grad_norm_(self.parameters(), max_norm=1.0,)
                 optimizer.step()
+                train_loss += loss.item()
+            
+            train_loss /= len(loader)
+
+            if X_val is not None and y_val is not None:
+                self.eval()
+                with torch.no_grad():
+                    X_val_device = X_val.to(self.device)
+                    y_val_device = y_val.to(self.device)
+
+                    logits = self(X_val_device)
+                    val_loss = criterion(logits, y_val_device,).item()
+
+                scheduler.step(val_loss)
+                stop = early_stopping(val_loss, self,)
+
+
+                if (epoch + 1) % 10 == 0:
+                    current_lr = optimizer.param_groups[0]["lr"]
+                    print(
+                        f"Epoch {epoch + 1}/{self.epochs}, "
+                        f"train_loss={train_loss:.6f}, " 
+                        f"val_loss={val_loss:.6f}, "
+                        f"lr={current_lr:.6f}"
+                    )
+                if stop:
+                    print(f"Early stopping at epoch {epoch + 1}")
+                    break
+            else:
+                if (epoch + 1) % 10 == 0:
+                    print(f"Epoch {epoch + 1}/{self.epochs}, loss={train_loss:.6f}")
+
+        early_stopping.restore_best(self)
 
         return self
 
@@ -152,7 +221,7 @@ def get_model(name:str, seed: int, task_type: str, cfg, input_dim=None):
 
     return model, model_family
 
-def train_model(model_name: str, X_train, y_train, cfg):
+def train_model(model_name: str, X_train, y_train, cfg, X_val=None, y_val=None):
     """Train a single model."""
 
     task_type = cfg.general.TASK
@@ -166,9 +235,18 @@ def train_model(model_name: str, X_train, y_train, cfg):
 
         X_train = torch.tensor(X_train, dtype=torch.float32)
         y_train = torch.tensor(y_train.values, dtype=torch.float32).unsqueeze(1)
+        
+        if X_val is not None and y_val is not None:
+            X_val = prep.transform(X_val)
+
+            if hasattr(X_val, "toarray"):
+                X_val = X_val.toarray()
+
+            X_val = torch.tensor(X_val, dtype=torch.float32)
+            y_val = torch.tensor(y_val.values, dtype=torch.float32).unsqueeze(1)
 
         model, _ = get_model(model_name, cfg.general.SEED, task_type, cfg, input_dim=X_train.shape[1])
-        model.fit(X_train, y_train)
+        model.fit(X_train, y_train, X_val, y_val)
 
         return model, prep
     
@@ -207,7 +285,7 @@ def run_cv(model_name:str, X, y, folds, cfg, results: list) -> np.ndarray:
         X_train, X_val = X.iloc[train_idx], X.iloc[val_idx]
         y_train, y_val = y.iloc[train_idx], y.iloc[val_idx]
 
-        model, prep = train_model(model_name, X_train, y_train, cfg)
+        model, prep = train_model(model_name, X_train, y_train, cfg, X_val, y_val)
         y_pred, y_proba = predict(model, prep, X_val)
 
         oof_preds[val_idx] = y_pred
