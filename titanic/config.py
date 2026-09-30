@@ -31,6 +31,7 @@ config = OmegaConf.create({
     },
     
     "cv": {
+        "ONLY": False,
         "n_splits": 5,
         "stratified": True,
     },
